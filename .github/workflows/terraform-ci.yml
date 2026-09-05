@@ -1,12 +1,12 @@
 name: Terraform CI
 
-# Trigger this workflow when code is pushed to the main branch
+# Trigger workflow when code is pushed to main
 on:
   push:
     branches:
       - main
 
-# Required for GitHub OIDC authentication to AWS
+# Required for GitHub OIDC authentication
 permissions:
   id-token: write
   contents: read
@@ -14,7 +14,7 @@ permissions:
 jobs:
   terraform-check:
 
-    # Run this job on a temporary Ubuntu GitHub runner
+    # Run this job on a temporary Ubuntu runner
     runs-on: ubuntu-latest
 
     steps:
@@ -23,29 +23,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Install/setup Terraform on the runner
+      # Step 2: Setup Terraform on the runner
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Step 3: Authenticate GitHub Actions to AWS using OIDC
+      # Step 3: Temporary debug step to show GitHub OIDC claims
+      - name: View OIDC claims
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: sts.amazonaws.com
+
+      # Step 4: Authenticate GitHub Actions to AWS using OIDC
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::470880515561:role/GitHubTerraformRole
           aws-region: eu-west-2
 
-      # Step 4: Initialize Terraform and download required providers
+      # Step 5: Initialize Terraform and download required providers
       - name: Terraform Init
         run: terraform init
 
-      # Step 5: Check whether Terraform configuration is valid
+      # Step 6: Validate Terraform configuration
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 6: Check Terraform code formatting
+      # Step 7: Check Terraform formatting
       - name: Terraform Format Check
         run: terraform fmt -check
 
-      # Step 7: Show what Terraform would create/change/delete
+      # Step 8: Show proposed Terraform changes
       - name: Terraform Plan
         run: terraform plan
