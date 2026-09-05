@@ -1,0 +1,51 @@
+name: Terraform CI
+
+# Trigger this workflow when code is pushed to the main branch
+on:
+  push:
+    branches:
+      - main
+
+# Required for GitHub OIDC authentication to AWS
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-check:
+
+    # Run this job on a temporary Ubuntu GitHub runner
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Step 1: Checkout repository files onto the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install/setup Terraform on the runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Step 3: Authenticate GitHub Actions to AWS using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::470880515561:role/GitHubTerraformRole
+          aws-region: eu-west-2
+
+      # Step 4: Initialize Terraform and download required providers
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 5: Check whether Terraform configuration is valid
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Step 6: Check Terraform code formatting
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      # Step 7: Show what Terraform would create/change/delete
+      - name: Terraform Plan
+        run: terraform plan
