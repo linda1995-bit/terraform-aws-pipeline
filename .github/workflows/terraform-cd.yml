@@ -1,0 +1,101 @@
+name: Terraform CD
+
+# Start the deployment workflow after code is merged/pushed to main
+on:
+  push:
+    branches:
+      - main
+
+# Required for GitHub OIDC authentication to AWS
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  # -------------------------------------------------------
+  # JOB 1: CREATE THE DEPLOYMENT PLAN
+  # -------------------------------------------------------
+  terraform-plan:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Step 1: Checkout repository code onto the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install/setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Step 3: Authenticate GitHub Actions to AWS using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::470880515561:role/GitHubTerraformRole
+          aws-region: eu-west-2
+
+      # Step 4: Initialize Terraform
+      # Connects to the S3 remote backend and installs providers
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 5: Create the exact deployment plan
+      # The plan is saved into a binary file called tfplan
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # Step 6: Store tfplan in GitHub so the next job can use it
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: tfplan
+          retention-days: 1
+
+
+  # -------------------------------------------------------
+  # JOB 2: APPLY THE EXACT PLAN
+  # -------------------------------------------------------
+  terraform-apply:
+
+    # Do not start unless terraform-plan succeeded
+    needs: terraform-plan
+
+    # Connect this job to our protected production environment.
+    # GitHub waits for the required reviewer approval here.
+    environment: production
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Step 1: Checkout repository code onto this new runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install/setup Terraform on this new runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Step 3: Authenticate this runner to AWS using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::470880515561:role/GitHubTerraformRole
+          aws-region: eu-west-2
+
+      # Step 4: Initialize Terraform again because this is a new runner
+      - name: Terraform Init
+        run: terraform init
+
+      # Step 5: Download the exact plan created by the plan job
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+
+      # Step 6: Apply exactly the downloaded plan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
