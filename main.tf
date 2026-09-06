@@ -3,6 +3,6 @@ resource "aws_vpc" "main" {
 
   tags = {
     Name        = "github-terraform-vpc-test"
-    Environment = "dev"
+    Environment = "dev11111"
   }
 }
