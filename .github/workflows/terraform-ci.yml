@@ -53,6 +53,13 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      # Step: Scan Terraform code for security and compliance issues
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+
       # Step 6:
       # Check whether the Terraform files follow standard formatting
       # -check only checks formatting; it does not modify the files
