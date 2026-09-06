@@ -4,5 +4,6 @@ resource "aws_vpc" "main" {
   tags = {
     Name        = "github-terraform-vpc-test"
     Environment = "dev11111"
+    Owner       = "cloud-team"
   }
 }
