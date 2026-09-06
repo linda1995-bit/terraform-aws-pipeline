@@ -1,8 +1,8 @@
 name: Terraform CI
 
-# Run this workflow whenever code is pushed to the main branch
+# Trigger CI when a Pull Request targets the main branch
 on:
-  push:
+  pull_request:
     branches:
       - main
 
